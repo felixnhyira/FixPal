@@ -1,0 +1,2 @@
+C:/Users/FELIX/StudioProjects/FixPal/android/app/.cxx/RelWithDebInfo/4e6c6k1s/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/FELIX/StudioProjects/FixPal/android/app/.cxx/RelWithDebInfo/4e6c6k1s/armeabi-v7a/CMakeFiles/rebuild_cache.dir

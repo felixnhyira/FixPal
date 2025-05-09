@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "194262400671",
+    "project_id": "fixpal2025",
+    "storage_bucket": "fixpal2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:194262400671:android:dfe961fcd3ed8345cbecaa",
+        "android_client_info": {
+          "package_name": "com.example.fixpal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsSgsIQKhD46CvcKCzwDHUgrK_6tEXDLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

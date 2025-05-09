@@ -1,0 +1,74 @@
+plugins {
+    id "com.android.application"
+    id "com.google.gms.google-services"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "org.jetbrains.kotlin.plugin.serialization" version "2.1.10"
+
+}
+
+android {
+
+
+    namespace = "com.example.fixpal"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+defaultConfig {
+    applicationId = "com.example.fixpal"
+    minSdk = 26
+    targetSdk = 35
+    versionCode = 1
+    versionName = "1.0"
+    manifestPlaceholders = [
+        'appAuthRedirectScheme': 'com.googleusercontent.apps.76E04768A757A38A4C0587BC4A898A26DF1A6EA9',
+        'applicationName': 'android.app.Application'
+    ]
+}
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+
+    // Import the Firebase BoM
+  
+    implementation(platform("com.google.firebase:firebase-bom:33.11.0"))
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    implementation("com.google.firebase:firebase-dataconnect:16.0.0-beta03")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.5.1")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-appcheck") 
+
+
+
+        // TODO: Add the dependencies for Firebase products you want to use
+
+    // When using the BoM, don't specify versions in Firebase dependencies
+
+    // https://firebase.google.com/docs/android/setup#available-libraries
+
+}
+
