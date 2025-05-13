@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'package:fixpal/screens/home_screen.dart';
 import 'package:fixpal/screens/register_screen.dart';
 import 'package:fixpal/screens/password_recovery_screen.dart';
@@ -12,6 +14,7 @@ import 'package:fixpal/screens/privacy_policy_screen.dart';
 import 'package:fixpal/utils/constants.dart';
 import 'package:fixpal/widgets/gradient_app_bar.dart';
 import 'package:fixpal/widgets/auth_text_field.dart';
+import 'package:fixpal/utils/snackbar_helper.dart'; // Ensure this import is correct
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +54,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _initPrefs() async {
     final savedEmailOrPhone = await _storage.read(key: 'emailOrPhone');
     final savedPassword = await _storage.read(key: 'password');
-
     if (savedEmailOrPhone != null && savedPassword != null) {
       setState(() {
         _emailOrPhoneController.text = savedEmailOrPhone;
@@ -62,18 +64,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  bool _isNumeric(String str) => str.isNotEmpty && RegExp(r'^[0-9]+$').hasMatch(str);
+  bool _isNumeric(String str) =>
+      str.isNotEmpty && RegExp(r'^[0-9]+$').hasMatch(str);
 
   Future<void> _loginUser() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (!_termsAccepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the terms and conditions and privacy policy'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      SnackbarHelper.showError(
+          context, 'Please accept the terms and conditions and privacy policy');
       return;
     }
 
@@ -81,42 +79,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       UserCredential userCredential;
-
       if (_isPhoneLogin) {
         final phoneNumber = _emailOrPhoneController.text.trim();
         if (!phoneNumber.startsWith('+')) {
-          _emailOrPhoneController.text = '+233${phoneNumber.substring(phoneNumber.startsWith('0') ? 1 : 0)}';
+          _emailOrPhoneController.text =
+          '+233${phoneNumber.substring(phoneNumber.startsWith('0') ? 1 : 0)}';
         }
-        userCredential = await _signInWithPhoneNumber(_emailOrPhoneController.text.trim());
+        userCredential =
+        await _signInWithPhoneNumber(_emailOrPhoneController.text.trim());
       } else {
         userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailOrPhoneController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        
-        
-        if (!userCredential.user!.emailVerified) {
-          await _auth.signOut();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Please verify your email first'),
-                action: SnackBarAction(
-                  label: 'Resend',
-                  onPressed: () => userCredential.user?.sendEmailVerification(),
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          return;
-        }
+
 
       }
 
       if (_saveLoginDetails) {
-        await _storage.write(key: 'emailOrPhone', value: _emailOrPhoneController.text.trim());
-        await _storage.write(key: 'password', value: _passwordController.text.trim());
+        await _storage.write(
+            key: 'emailOrPhone', value: _emailOrPhoneController.text.trim());
+        await _storage.write(
+            key: 'password', value: _passwordController.text.trim());
       } else {
         await _storage.delete(key: 'emailOrPhone');
         await _storage.delete(key: 'password');
@@ -132,7 +116,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _handleAuthError(e);
     } catch (e) {
-      _showErrorSnackBar('An unexpected error occurred: ${e.toString()}');
+      SnackbarHelper.showError(
+          context, 'An unexpected error occurred: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -142,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<UserCredential> _signInWithPhoneNumber(String phoneNumber) async {
     final completer = Completer<UserCredential>();
-
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       verificationCompleted: (credential) async {
@@ -150,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
         completer.complete(result);
       },
       verificationFailed: (e) {
-        _showErrorSnackBar(e.message ?? 'Verification failed');
+        SnackbarHelper.showError(context, e.message ?? 'Verification failed');
         completer.completeError(e);
       },
       codeSent: (String verificationId, int? resendToken) {
@@ -165,13 +149,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _verificationId = id;
       },
     );
-
     return completer.future;
   }
 
   void _promptSmsCode(BuildContext context, String verificationId) {
     final smsCodeController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -199,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   );
                 }
               } catch (e) {
-                _showErrorSnackBar("Invalid or expired code");
+                SnackbarHelper.showError(context, "Invalid or expired code");
               }
             },
             child: const Text("Submit"),
@@ -233,18 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
       default:
         errorMessage = 'Login failed: ${e.message}';
     }
-    _showErrorSnackBar(errorMessage);
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    SnackbarHelper.showError(context, errorMessage);
   }
 
   Future<void> _launchUrl(String url) async {
@@ -252,9 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch the requested app')),
-      );
+      SnackbarHelper.showError(context, 'Could not launch the requested app');
     }
   }
 
@@ -278,8 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   errorBuilder: (_, __, ___) => const Icon(
                       Icons.handyman,
                       size: 100,
-                      color: AppConstants.primaryBlue
-                  ),
+                      color: AppConstants.primaryBlue),
                 ),
               ),
               const SizedBox(height: 16),
@@ -298,16 +266,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
               AuthTextField(
                 controller: _emailOrPhoneController,
                 focusNode: _emailFocusNode,
                 labelText: _isPhoneLogin ? 'Phone Number' : 'Email',
-                hintText: _isPhoneLogin ? '+233XXXXXXXXX' : 'your@email.com',
+                hintText:
+                _isPhoneLogin ? '+233XXXXXXXXX' : 'your@email.com',
                 prefixIcon: _isPhoneLogin ? Icons.phone : Icons.email,
-                keyboardType: _isPhoneLogin ? TextInputType.phone : TextInputType.emailAddress,
+                keyboardType: _isPhoneLogin
+                    ? TextInputType.phone
+                    : TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocusNode),
+                onFieldSubmitted: (_) => FocusScope.of(context)
+                    .requestFocus(_passwordFocusNode),
                 inputFormatters: _isPhoneLogin
                     ? [FilteringTextInputFormatter.digitsOnly]
                     : null,
@@ -315,10 +286,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your ${_isPhoneLogin ? 'phone number' : 'email'}';
                   }
-                  if (_isPhoneLogin && !RegExp(r'^\+?[0-9]{8,15}$').hasMatch(value)) {
+                  if (_isPhoneLogin &&
+                      !RegExp(r'^\+?[0-9]{8,15}$').hasMatch(value)) {
                     return 'Please enter a valid phone number';
                   }
-                  if (!_isPhoneLogin && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                  if (!_isPhoneLogin &&
+                      !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                     return 'Please enter a valid email';
                   }
                   return null;
@@ -326,7 +299,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 suffixIcon: IconButton(
                   icon: Icon(_isPhoneLogin ? Icons.email : Icons.phone),
                   onPressed: () {
-                    final currentInput = _emailOrPhoneController.text.trim();
+                    final currentInput =
+                    _emailOrPhoneController.text.trim();
                     setState(() {
                       _isPhoneLogin = !_isPhoneLogin;
                       if ((_isPhoneLogin && !_isNumeric(currentInput)) ||
@@ -335,11 +309,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     });
                   },
-                  tooltip: _isPhoneLogin ? 'Use email instead' : 'Use phone instead',
+                  tooltip: _isPhoneLogin
+                      ? 'Use email instead'
+                      : 'Use phone instead',
                 ),
               ),
               const SizedBox(height: 16),
-
               AuthTextField(
                 controller: _passwordController,
                 focusNode: _passwordFocusNode,
@@ -364,7 +339,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -372,8 +346,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Checkbox(
                         value: _saveLoginDetails,
-                        onChanged: (value) => setState(() => _saveLoginDetails = value ?? false),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (value) =>
+                            setState(() => _saveLoginDetails = value ?? false),
+                        materialTapTargetSize:
+                        MaterialTapTargetSize.shrinkWrap,
                       ),
                       const Text('Remember me'),
                     ],
@@ -381,19 +357,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => PasswordRecoveryScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const PasswordRecoveryScreen()),
                     ),
                     child: const Text('Forgot password?'),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-
               Row(
                 children: [
                   Checkbox(
                     value: _termsAccepted,
-                    onChanged: (value) => setState(() => _termsAccepted = value ?? false),
+                    onChanged: (value) =>
+                        setState(() => _termsAccepted = value ?? false),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   Expanded(
@@ -406,7 +383,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: GestureDetector(
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                    const TermsAndConditionsScreen()),
                               ),
                               child: const Text(
                                 'Terms',
@@ -422,7 +401,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: GestureDetector(
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                    const PrivacyPolicyScreen()),
                               ),
                               child: const Text(
                                 'Privacy Policy',
@@ -440,7 +421,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -480,7 +460,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -495,7 +474,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-
               Row(
                 children: [
                   const Expanded(child: Divider()),
@@ -510,7 +488,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-
               Column(
                 children: [
                   Text(
@@ -524,13 +501,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.phone, color: AppConstants.primaryBlue),
-                        onPressed: () => _launchUrl('tel:${AppConstants.supportPhone}'),
+                        icon: const Icon(Icons.phone,
+                            color: AppConstants.primaryBlue),
+                        onPressed: () =>
+                            _launchUrl('tel:${AppConstants.supportPhone}'),
                       ),
                       const SizedBox(width: 24),
                       IconButton(
-                        icon: const Icon(Icons.email, color: AppConstants.primaryBlue),
-                        onPressed: () => _launchUrl('mailto:${AppConstants.supportEmail}'),
+                        icon: const Icon(Icons.email,
+                            color: AppConstants.primaryBlue),
+                        onPressed: () =>
+                            _launchUrl('mailto:${AppConstants.supportEmail}'),
                       ),
                     ],
                   ),

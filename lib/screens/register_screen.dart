@@ -9,10 +9,11 @@ import 'package:intl/intl.dart';
 import 'package:fixpal/screens/login_screen.dart';
 import 'package:fixpal/utils/constants.dart';
 import 'package:permission_handler/permission_handler.dart';
+// Import SnackbarHelper
+import 'package:fixpal/utils/snackbar_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
-
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -69,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // Validation methods remain the same
   bool _validateGhanaCard(String idNumber) {
     RegExp idPattern = RegExp(r'^GHA-\d{9}-\d$');
     return idPattern.hasMatch(idNumber.trim());
@@ -105,14 +105,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!status.isGranted) {
         final result = await Permission.storage.request();
         if (!result.isGranted) {
-          _showSnackBar('Storage permission denied');
+          SnackbarHelper.showError(context, 'Storage permission denied');
           return;
         }
       }
-
       final pickedFile = await ImagePicker().pickImage(source: source);
       if (pickedFile == null) return;
-
       CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: pickedFile.path,
         aspectRatio: type == 'profile'
@@ -132,7 +130,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           IOSUiSettings(title: 'Crop Image'),
         ],
       );
-
       if (croppedFile != null) {
         setState(() {
           if (type == 'id') {
@@ -145,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } catch (e) {
-      _showSnackBar('Failed to pick/crop image: $e');
+      SnackbarHelper.showError(context, 'Failed to pick/crop image: $e');
     }
   }
 
@@ -157,39 +154,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
           .get();
       return emailQuery.docs.isNotEmpty;
     } catch (e) {
-      _showSnackBar('Error checking email');
+      SnackbarHelper.showError(context, 'Error checking email');
       return false;
     }
   }
 
   Future<String?> _uploadFile(File? file, String path) async {
     if (file == null) return null;
-
     try {
       final ref = _storage.ref().child('user_uploads/$path');
       final uploadTask = ref.putFile(file);
       final snapshot = await uploadTask.whenComplete(() {});
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
-      _showSnackBar('File upload failed: $e');
+      SnackbarHelper.showError(context, 'File upload failed: $e');
       return null;
     }
   }
 
   Future<void> _registerUser() async {
     if (!_formKey.currentState!.validate()) {
-      _showSnackBar('Please fix the errors in the form');
+      SnackbarHelper.showWarning(context, 'Please fix the errors in the form');
       return;
     }
-
     final emailExists = await _isEmailRegistered(_emailController.text.trim());
     if (emailExists) {
-      _showSnackBar('Email already registered');
+      SnackbarHelper.showError(context, 'Email already registered');
       return;
     }
-
     setState(() => _isRegistering = true);
-
     try {
       // Create user account
       final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -203,8 +196,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final cvUrl = await _uploadFile(_cvFile, 'cv_${userCredential.user!.uid}');
       final certificateUrl = await _uploadFile(_certificateFile, 'certificate_${userCredential.user!.uid}');
 
-      // Save user data
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          // Save user data
+          await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'userId': userCredential.user!.uid,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
@@ -228,41 +221,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'isActive': true,
       });
 
-      _showSnackBar('Registration successful!');
+      SnackbarHelper.showSuccess(context, 'Registration successful!');
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
             (route) => false,
       );
     } catch (e) {
-      _showSnackBar('Registration failed: $e');
+    SnackbarHelper.showError(context, 'Registration failed: $e');
     } finally {
-      if (mounted) setState(() => _isRegistering = false);
+    if (mounted) setState(() => _isRegistering = false);
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   Widget _buildStepIndicator() {
     return Row(
-      children: List.generate(4, (index) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        width: _currentStep == index ? 30 : 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: _currentStep >= index
-              ? Theme.of(context).primaryColor
-              : Colors.grey[300],
-          borderRadius: BorderRadius.circular(4),
-        ),
-      )),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(4, (index) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          width: 30,
+          height: 4,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            color: _currentStep >= index
+                ? Theme.of(context).primaryColor
+                : Colors.grey[300],
+          ),
+        );
+      }),
     );
   }
 
@@ -276,15 +263,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     void Function(String)? onChanged,
     bool readOnly = false,
     VoidCallback? onTap,
+    String? hintText,
   }) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: labelText,
+        hintText: hintText,
         prefixIcon: Icon(icon),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        errorMaxLines: 2,
       ),
       validator: validator,
       obscureText: obscureText,
@@ -295,12 +298,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Widget _buildStepHeader(String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
   Widget _buildPersonalDetailsStep() {
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          _buildStepHeader('Personal Information'),
           Row(
             children: [
               Expanded(
@@ -327,9 +344,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: _ghanaCardController,
             labelText: 'Ghana Card Number',
             icon: Icons.credit_card,
+            hintText: 'GHA-123456789-0',
             validator: (value) => _validateGhanaCard(value ?? '')
                 ? null
-                : 'Format: GHA-123456789-0',
+                : 'Invalid format (e.g., GHA-123456789-0)',
           ),
           const SizedBox(height: 16),
           _buildOutlinedFormField(
@@ -344,6 +362,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 initialDate: DateTime.now().subtract(const Duration(days: 6570)),
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: Theme.of(context).primaryColor,
+                        onPrimary: Colors.white,
+                        onSurface: Colors.black,
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
               );
               if (date != null) {
                 setState(() {
@@ -361,16 +391,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          _buildStepHeader('Contact Information'),
           _buildOutlinedFormField(
             controller: _phoneController,
             labelText: 'Phone Number',
             icon: Icons.phone,
+            hintText: '0234567890',
             keyboardType: TextInputType.phone,
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Required';
-              if (!_validatePhoneNumber(value)) return 'Invalid Ghanaian number';
+              if (value == null || value.isEmpty) return 'Phone number is required';
+              if (!_validatePhoneNumber(value)) {
+                return 'Enter a valid Ghanaian number\n(Example: 0234567890)';
+              }
               return null;
             },
           ),
@@ -381,8 +415,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             icon: Icons.email,
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Required';
-              if (!_validateEmail(value)) return 'Invalid email format';
+              if (value == null || value.isEmpty) return 'Email is required';
+              if (!_validateEmail(value)) {
+                return 'Enter a valid email\n(Example: user@example.com)';
+              }
               return null;
             },
           ),
@@ -395,8 +431,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          _buildStepHeader('Account Security'),
           _buildOutlinedFormField(
             controller: _passwordController,
             labelText: 'Password',
@@ -404,8 +441,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             obscureText: true,
             onChanged: _validatePassword,
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Required';
-              if (!_isPasswordValid) return 'Does not meet requirements';
+              if (value == null || value.isEmpty) return 'Please enter a password';
+              if (!_isPasswordValid) return 'Password does not meet requirements';
               return null;
             },
           ),
@@ -424,10 +461,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
             icon: Icons.lock,
             obscureText: true,
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Required';
-              if (value != _passwordController.text) return 'Passwords don\'t match';
+              if (value == null || value.isEmpty) return 'Please confirm your password';
+              if (value != _passwordController.text) return 'Passwords do not match';
               return null;
             },
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Password Requirements:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          _buildPasswordRequirement('At least 8 characters', _passwordController.text.length >= 8),
+          _buildPasswordRequirement('1 uppercase letter', _hasUppercase),
+          _buildPasswordRequirement('1 lowercase letter', _hasLowercase),
+          _buildPasswordRequirement('1 number', _hasNumber),
+          _buildPasswordRequirement('1 special character', _hasSymbol),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle,
+            color: isMet ? Colors.green : Colors.grey,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: isMet ? Colors.green : Colors.grey,
+            ),
           ),
         ],
       ),
@@ -438,8 +508,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          _buildStepHeader('Profile Completion'),
           DropdownButtonFormField<String>(
             value: _selectedRole,
             decoration: InputDecoration(
@@ -528,10 +599,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.camera_alt),
-                  label: const Text('Upload Photo'),
+                  label: const Text('Upload Profile Photo'),
                   onPressed: () => _pickAndCropImage(ImageSource.gallery, 'profile'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    side: BorderSide(color: Colors.grey.shade400),
                   ),
                 ),
               ),
@@ -552,10 +627,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.credit_card),
-                  label: const Text('Upload ID'),
+                  label: const Text('Upload ID Photo'),
                   onPressed: () => _pickAndCropImage(ImageSource.gallery, 'id'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    side: BorderSide(color: Colors.grey.shade400),
                   ),
                 ),
               ),
@@ -585,6 +664,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
@@ -621,6 +701,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (_currentStep > 0)
                   OutlinedButton(
                     onPressed: () => setState(() => _currentStep--),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: const Text('Back'),
                   ),
                 if (_currentStep < 3)
@@ -629,17 +715,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (_formKey.currentState!.validate()) {
                         setState(() => _currentStep++);
                       } else {
-                        _showSnackBar('Please fix errors before continuing');
+                        SnackbarHelper.showWarning(context, 'Please fix all errors before continuing');
                       }
                     },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: const Text('Next'),
                   ),
                 if (_currentStep == 3)
                   ElevatedButton(
                     onPressed: _isRegistering ? null : _registerUser,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: _isRegistering
-                        ? const CircularProgressIndicator()
-                        : const Text('Register'),
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                        : const Text('Complete Registration'),
                   ),
               ],
             ),
@@ -658,6 +763,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
   final bool isValidLength;
 
   const PasswordStrengthIndicator({
+    super.key,
     required this.hasUppercase,
     required this.hasLowercase,
     required this.hasNumber,
@@ -667,23 +773,30 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final met = [
+    final totalRequirements = 5;
+    final metRequirements = [
       hasUppercase,
       hasLowercase,
       hasNumber,
       hasSymbol,
       isValidLength
-    ].where((e) => e).length;
-
+    ].where((met) => met).length;
     return Column(
       children: [
         LinearProgressIndicator(
-          value: met / 5,
+          value: metRequirements / totalRequirements,
           backgroundColor: Colors.grey[200],
-          color: met == 5 ? Colors.green : Colors.orange,
+          color: metRequirements == totalRequirements ? Colors.green : Colors.orange,
+          minHeight: 6,
         ),
         const SizedBox(height: 4),
-        Text('$met/5 requirements met', style: Theme.of(context).textTheme.bodySmall),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            '$metRequirements/$totalRequirements requirements met',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       ],
     );
   }

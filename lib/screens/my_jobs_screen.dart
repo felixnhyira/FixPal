@@ -1,3 +1,4 @@
+import 'package:fixpal/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For date formatting
@@ -22,6 +23,7 @@ class MyJobsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: AppConstants.white,
         title: Text(isFreelancer ? 'Jobs Applied' : 'Jobs Posted'),
         flexibleSpace: Container(
           decoration: const BoxDecoration(

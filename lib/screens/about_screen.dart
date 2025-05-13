@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fixpal/utils/constants.dart';
+import '../widgets/app_bar_gradient.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -6,9 +8,11 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('About FixPal'),
-        backgroundColor: const Color(0xFF062D8A), // Primary blue color
+      appBar: AppBarGradient(
+        title: const Text(
+          'About FixPal',
+          style: TextStyle(color: AppConstants.white),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

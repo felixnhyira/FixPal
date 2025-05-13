@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import '../utils/constants.dart';
+import '../utils/snackbar_helper.dart';
+import '../widgets/app_bar_gradient.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -8,9 +11,11 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        backgroundColor: const Color(0xFF062D8A), // Primary blue color
+      appBar: AppBarGradient(
+        title: const Text(
+          'Notifications',
+          style: TextStyle(color: AppConstants.white),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('notifications').snapshots(),
@@ -48,10 +53,10 @@ class NotificationsScreen extends StatelessWidget {
                   ),
                   trailing: notificationData['isRead'] == false
                       ? const CircleAvatar(
-                          radius: 8,
-                          backgroundColor: Colors.red,
-                          child: Icon(Icons.fiber_manual_record, size: 12, color: Colors.white),
-                        )
+                    radius: 8,
+                    backgroundColor: Colors.red,
+                    child: Icon(Icons.fiber_manual_record, size: 12, color: Colors.white),
+                  )
                       : null,
                   onTap: () async {
                     // Mark notification as read
@@ -59,8 +64,9 @@ class NotificationsScreen extends StatelessWidget {
                       'isRead': true,
                     });
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(notificationData['title'] ?? 'No Title')),
+                    SnackbarHelper.show(
+                      context,
+                      notificationData['title'] ?? 'No Title',
                     );
                   },
                 ),

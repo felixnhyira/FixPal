@@ -1,14 +1,14 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-
 class DateFormatter {
-  // Format full date with ordinal (e.g., 12th May 2025 or 12 mai 2025)
   static String formatDate(DateTime? date) {
     if (date == null) return 'N/A';
 
     final day = getDayWithSuffix(date.day);
-    final monthFormat = DateFormat('MMMM'); // localized month name
+    final monthFormat = DateFormat('MMMM');
     final yearFormat = DateFormat('yyyy');
 
     final month = monthFormat.format(date);
@@ -17,7 +17,6 @@ class DateFormatter {
     return '$day $month $year';
   }
 
-  // Helper to add ordinal suffix to day
   static String getDayWithSuffix(int day) {
     if (day >= 11 && day <= 13) {
       return '${day}th';
@@ -34,19 +33,49 @@ class DateFormatter {
     }
   }
 
-  // Format date-time (localized)
-  static String formatDateTime(DateTime? date) {
+  static String formatDaysLeft(DateTime? date) {
     if (date == null) return 'N/A';
-    return DateFormat('yyyy-MM-dd hh:mm a').format(date);
+
+    final now = DateTime.now();
+    final difference = date.difference(now);
+
+    if (difference.inHours < 0) {
+      return 'Deadline passed';
+    }
+
+    final days = difference.inDays;
+
+    if (days == 0) {
+      return 'Less than a day left';
+    } else if (days == 1) {
+      return '1 day left';
+    } else {
+      return '$days days left';
+    }
   }
 
-  // Format relative time (e.g., "2 hours ago", "in 3 days")
+  static Color getDeadlineColor(DateTime? date) {
+    if (date == null) return Colors.grey;
+
+    final now = DateTime.now();
+    final difference = date.difference(now);
+
+    if (difference.inHours <= 0) {
+      return Colors.redAccent;
+    } else if (difference.inDays < 2) {
+      return Colors.orange;
+    } else if (difference.inDays < 7) {
+      return Colors.deepOrangeAccent;
+    } else {
+      return Colors.green;
+    }
+  }
+
   static String formatRelativeTime(DateTime? date) {
     if (date == null) return 'N/A';
 
-    // Set locale for timeago (optional, defaults to English)
-    timeago.setLocaleMessages('fr', timeago.FrMessages()); // example for French
-    timeago.setLocaleMessages('es', timeago.EsMessages()); // Spanish
+    timeago.setLocaleMessages('fr', timeago.FrMessages());
+    timeago.setLocaleMessages('es', timeago.EsMessages());
 
     final locale = Intl.getCurrentLocale()?.substring(0, 2) ?? 'en';
     return timeago.format(date, locale: locale);

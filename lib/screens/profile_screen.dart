@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:fixpal/screens/edit_profile_screen.dart';
+import 'package:fixpal/screens/otp_verification_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String userId;
-
   const ProfileScreen({super.key, required this.userId});
 
   Future<void> _resendVerificationEmail(BuildContext context) async {
@@ -14,14 +15,32 @@ class ProfileScreen extends StatelessWidget {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         await user.sendEmailVerification();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification email sent!')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Verification email sent!')),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openDocument(BuildContext context, String? url) async {
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Can't open document")),
+        );
+      }
     }
   }
 
@@ -38,15 +57,12 @@ class ProfileScreen extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-
         if (!snapshot.hasData || !snapshot.data!.exists) {
           return const Scaffold(
             body: Center(child: Text('User not found')),
           );
         }
-
         final userData = snapshot.data!.data() as Map<String, dynamic>;
-
         return Scaffold(
           appBar: AppBar(
             title: const Text('Profile'),
@@ -96,13 +112,11 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         if (auth.currentUser?.uid == userId)
                           _buildVerificationStatus(context, userData),
-
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // User Details Section
+                  // Account Info
                   const Text(
                     'Account Information',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -122,8 +136,7 @@ class ProfileScreen extends StatelessWidget {
                     userData['dob'] ?? 'N/A',
                   ),
                   const SizedBox(height: 24),
-
-                  // Professional Information (for freelancers)
+                  // Professional Info
                   if (userData['role'] == 'Freelancer') ...[
                     const Text(
                       'Professional Information',
@@ -138,16 +151,17 @@ class ProfileScreen extends StatelessWidget {
                       _buildDocumentButton(
                         'View Certificate',
                         userData['certificateUrl'],
+                        context,
                       ),
                     if (userData['cvUrl'] != null)
                       _buildDocumentButton(
                         'View CV',
                         userData['cvUrl'],
+                        context,
                       ),
                     const SizedBox(height: 24),
                   ],
-
-                  // Reviews Section
+                  // Reviews
                   const Text(
                     'Reviews',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -177,35 +191,32 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(value.isNotEmpty ? value : 'N/A'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentButton(String label, String url) {
+  Widget _buildDocumentButton(String label, String url, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: OutlinedButton(
-        onPressed: () {
-          // Implement document viewer
-        },
+        onPressed: () => _openDocument(context, url),
         child: Text(label),
       ),
     );
   }
 
-  Widget _buildVerificationStatus(BuildContext context, Map<String, dynamic> userData)
- {
+  Widget _buildVerificationStatus(
+      BuildContext context, Map<String, dynamic> userData) {
     final isCurrentUser = FirebaseAuth.instance.currentUser?.uid == userId;
     final phoneVerified = userData['phoneVerified'] ?? false;
     final emailVerified = userData['emailVerified'] ?? false;
-
     return Column(
       children: [
         const SizedBox(height: 8),
-        if (isCurrentUser) ...[
+        if (isCurrentUser)
           ListTile(
             leading: Icon(
               emailVerified ? Icons.verified : Icons.warning,
@@ -220,11 +231,12 @@ class ProfileScreen extends StatelessWidget {
             ),
             trailing: !emailVerified
                 ? TextButton(
-                    onPressed: () => _resendVerificationEmail(context),
-                    child: const Text('Resend'),
-                  )
+              onPressed: () => _resendVerificationEmail(context),
+              child: const Text('Resend'),
+            )
                 : null,
           ),
+        if (isCurrentUser)
           ListTile(
             leading: Icon(
               phoneVerified ? Icons.verified : Icons.warning,
@@ -239,46 +251,29 @@ class ProfileScreen extends StatelessWidget {
             ),
             trailing: !phoneVerified
                 ? TextButton(
-                    onPressed: () {
-                      // Implement phone verification flow
-                    },
-                    child: const Text('Verify'),
-                  )
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OTPVerificationScreen(
+                      phoneNumber: userData['phoneNumber'] ?? '',
+                      onCodeSent: (verificationId) {},
+                      onVerified: () {
+                        // Update Firestore with phoneVerified: true
+                        FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(userId)
+                            .update({'phoneVerified': true});
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Verify'),
+            )
                 : null,
           ),
-          const SizedBox(height: 8),
-        ] else ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.verified,
-                color: emailVerified ? Colors.green : Colors.grey,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Email ${emailVerified ? 'Verified' : 'Not Verified'}',
-                style: TextStyle(
-                  color: emailVerified ? Colors.green : Colors.grey,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(
-                Icons.verified,
-                color: phoneVerified ? Colors.green : Colors.grey,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Phone ${phoneVerified ? 'Verified' : 'Not Verified'}',
-                style: TextStyle(
-                  color: phoneVerified ? Colors.green : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ],
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -294,7 +289,6 @@ class ProfileScreen extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(16.0),
@@ -305,18 +299,15 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
         }
-
         final reviews = snapshot.data!.docs;
         double averageRating = 0;
-
         if (reviews.isNotEmpty) {
           final total = reviews.fold(
               0.0,
-              (sum, doc) =>
-                  sum + (doc.data() as Map<String, dynamic>)['rating']);
+                  (accumulator, doc) =>
+              accumulator + (doc.data() as Map<String, dynamic>)['rating']);
           averageRating = total / reviews.length;
         }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -374,7 +365,8 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      if (review['comment'] != null)
+                      if (review['comment'] != null &&
+                          review['comment'].isNotEmpty)
                         Text(
                           review['comment'],
                           style: const TextStyle(fontSize: 14),

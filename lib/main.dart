@@ -71,7 +71,14 @@ Future<void> requestPermissions() async {
       debugPrint('$permission: ${status.isGranted}');
     });
   }
+  // Handle specific permissions
+  if (!permissions[Permission.storage]!.isGranted) {
+    if (kDebugMode) {
+      debugPrint('Storage permission denied. Consider using scoped storage.');
+    }
+  }
 }
+
 
 class FixPalApp extends StatelessWidget {
   final SharedPreferences prefs;

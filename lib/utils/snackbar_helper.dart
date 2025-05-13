@@ -7,46 +7,58 @@ class SnackbarHelper {
   }
 
   // Success snackbar
-  static void showSuccess(BuildContext context, String message) {
+  static void showSuccess(BuildContext context, String message,
+      {String? actionLabel, VoidCallback? onAction}) {
     _showCustomSnackbar(
       context,
       message: message,
       icon: Icons.check_circle,
       backgroundColor: Colors.green.shade600,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
   // Error snackbar
-  static void showError(BuildContext context, String message) {
+  static void showError(BuildContext context, String message,
+      {String? actionLabel, VoidCallback? onAction}) {
     _showCustomSnackbar(
       context,
       message: message,
       icon: Icons.error,
       backgroundColor: Colors.red.shade600,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
   // Info snackbar
-  static void showInfo(BuildContext context, String message) {
+  static void showInfo(BuildContext context, String message,
+      {String? actionLabel, VoidCallback? onAction}) {
     _showCustomSnackbar(
       context,
       message: message,
       icon: Icons.info,
       backgroundColor: Colors.blue.shade600,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
   // Warning snackbar
-  static void showWarning(BuildContext context, String message) {
+  static void showWarning(BuildContext context, String message,
+      {String? actionLabel, VoidCallback? onAction}) {
     _showCustomSnackbar(
       context,
       message: message,
       icon: Icons.warning,
       backgroundColor: Colors.orange.shade600,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
-  // Custom snackbar
+  // Custom snackbar (low-level usage)
   static void _showCustomSnackbar(
       BuildContext context, {
         required String message,
@@ -64,7 +76,7 @@ class SnackbarHelper {
               Icon(icon, color: Colors.white),
               const SizedBox(width: 12),
             ],
-            Expanded(child: Text(message)),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
           ],
         ),
         backgroundColor: backgroundColor ?? Theme.of(context).snackBarTheme.backgroundColor,
@@ -85,7 +97,7 @@ class SnackbarHelper {
     );
   }
 
-  // Dismiss all snackbars
+  // Dismiss all active snackbars
   static void dismissAll(BuildContext context) {
     ScaffoldMessenger.of(context).clearSnackBars();
   }

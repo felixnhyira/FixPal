@@ -5,8 +5,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'dart:io';
-import 'package:fixpal/utils/constants.dart';
 import 'package:intl/intl.dart';
+
+import '../utils/constants.dart'; // Make sure this file contains regionsAndCities and jobCategories
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -28,10 +29,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _selectedRegion;
   String? _selectedCity;
   String? _jobCategory;
+
   File? _idImageFile;
   File? _profilePhotoFile;
   File? _cvFile;
   File? _certificateFile;
+
   bool _isLoading = false;
   bool _isCurrentUser = false;
 
@@ -56,13 +59,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .collection('users')
           .doc(widget.userId)
           .get();
-
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
           _firstNameController.text = data['firstName'] ?? '';
           _lastNameController.text = data['lastName'] ?? '';
-          _phoneController.text = data['phoneNumber']?.replaceFirst('+233', '0') ?? '';
+          _phoneController.text =
+              data['phoneNumber']?.replaceFirst('+233', '0') ?? '';
           _ghanaCardController.text = data['ghanaCardNumber'] ?? '';
           _dobController.text = data['dob'] ?? '';
           _selectedRegion = data['region'];
@@ -85,7 +88,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (pickedFile != null) {
         final croppedFile = await ImageCropper().cropImage(
           sourcePath: pickedFile.path,
-          aspectRatio: type == 'profile' 
+          aspectRatio: type == 'profile'
               ? const CropAspectRatio(ratioX: 1, ratioY: 1)
               : null,
           compressQuality: 70,
@@ -103,7 +106,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ],
         );
-
         if (croppedFile != null && mounted) {
           setState(() {
             if (type == 'id') {
@@ -157,11 +159,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _profilePhotoFile, 'profile_${widget.userId}');
       final idUrl = await _uploadFile(_idImageFile, 'id_${widget.userId}');
       final cvUrl = await _uploadFile(_cvFile, 'cv_${widget.userId}');
-      final certificateUrl = await _uploadFile(
-          _certificateFile, 'certificate_${widget.userId}');
+      final certificateUrl =
+      await _uploadFile(_certificateFile, 'certificate_${widget.userId}');
 
       // Prepare update data
-      final updateData = {
+      final updateData = <String, dynamic>{
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'ghanaCardNumber': _ghanaCardController.text.trim(),
@@ -169,7 +171,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'city': _selectedCity,
         'dob': _dobController.text,
         'updatedAt': FieldValue.serverTimestamp(),
-        'verificationStatus': 'pending', // Require re-verification
+        'verificationStatus': 'pending',
       };
 
       // Add optional fields
@@ -192,7 +194,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             content: Text('Profile updated successfully! Admin approval required.'),
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context); // Go back to ProfileScreen
       }
     } catch (e) {
       if (mounted) {
@@ -293,7 +295,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                    value?.isEmpty ?? true ? 'Required' : null,
+                value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -303,7 +305,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                    value?.isEmpty ?? true ? 'Required' : null,
+                value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -314,7 +316,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                    _validateGhanaCard(value ?? '') ? null : 'Invalid format',
+                _validateGhanaCard(value ?? '') ? null : 'Invalid format',
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -329,7 +331,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   );
                   if (date != null) {
                     setState(() {
-                      _dobController.text = DateFormat('yyyy-MM-dd').format(date);
+                      _dobController.text =
+                          DateFormat('yyyy-MM-dd').format(date);
                     });
                   }
                 },

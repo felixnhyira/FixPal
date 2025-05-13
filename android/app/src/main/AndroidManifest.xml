@@ -1,12 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.fixpal">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.fixpal"
+    android:versionCode="TODO"
+    android:versionName="TODO">
 
     <uses-feature
         android:name="android.hardware.telephony"
-        android:required="false" />
+        android:required="false"
+        tools:targetApi="5" />
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="false" />
+        android:required="false"
+        tools:targetApi="5" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -29,6 +34,14 @@
 
     <!-- Internet Permission (Required for Firebase and other services) -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Storage Permission -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:targetApi="4" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:targetApi="4" />
 
 
     <application
