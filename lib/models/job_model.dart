@@ -31,7 +31,7 @@ class JobModel {
     this.videoUrl,
     this.timestamp,
     this.applicantsCount = 0, // Default to 0 if not set
-    bool? isFeatured,
+    this.isFeatured = false,
   });
 
   /// Convert Firestore document to JobModel
@@ -63,15 +63,14 @@ class JobModel {
       'category': category,
       'region': region,
       'city': city,
-      'deadline': deadline != null ? FieldValue.serverTimestamp() : null,
+      'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
       'postedBy': postedBy,
       'status': status,
       'imageUrl': imageUrl,
       'videoUrl': videoUrl,
-      'timestamp': timestamp != null ? FieldValue.serverTimestamp() : null,
+      'timestamp': timestamp != null ? Timestamp.fromDate(timestamp!) : null,
       'applicantsCount': applicantsCount,
-      'isFeatured': isFeatured, 
-
+      'isFeatured': isFeatured,
     };
   }
 }

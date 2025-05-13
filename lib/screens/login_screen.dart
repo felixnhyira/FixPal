@@ -93,7 +93,8 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailOrPhoneController.text.trim(),
           password: _passwordController.text.trim(),
         );
-
+        
+        
         if (!userCredential.user!.emailVerified) {
           await _auth.signOut();
           if (mounted) {
@@ -110,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
           return;
         }
+
       }
 
       if (_saveLoginDetails) {

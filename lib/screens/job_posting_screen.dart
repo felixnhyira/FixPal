@@ -1,5 +1,4 @@
 // ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,9 +9,7 @@ import 'package:fixpal/utils/constants.dart';
 
 class JobPostingScreen extends StatefulWidget {
   final String? userId;
-
   const JobPostingScreen({super.key, this.userId});
-
   @override
   _JobPostingScreenState createState() => _JobPostingScreenState();
 }
@@ -21,11 +18,9 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _deadlineController = TextEditingController();
-
   String? _selectedCategory;
   String? _selectedRegion;
   String? _selectedCity;
-
   File? _imageFile;
   File? _videoFile;
 
@@ -68,39 +63,32 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill in all fields')));
       return;
     }
-
     try {
       String? imageUrl;
       String? videoUrl;
-
-      // Upload image if selected
       if (_imageFile != null) {
         imageUrl = await _uploadFile(_imageFile!, 'job_images');
       }
-
-      // Upload video if selected
       if (_videoFile != null) {
         videoUrl = await _uploadFile(_videoFile!, 'job_videos');
       }
-
-      // Save job posting to Firestore
+      // Convert deadline to Timestamp
+      DateTime deadlineDate = DateFormat('yyyy-MM-dd').parse(_deadlineController.text);
+      Timestamp deadlineTimestamp = Timestamp.fromDate(deadlineDate);
       await FirebaseFirestore.instance.collection('jobs').add({
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'category': _selectedCategory,
         'region': _selectedRegion,
         'city': _selectedCity,
-        'deadline': DateFormat('yyyy-MM-dd').parse(_deadlineController.text),
+        'deadline': deadlineTimestamp,
         'postedBy': widget.userId,
         'status': 'open',
         'imageUrl': imageUrl,
         'videoUrl': videoUrl,
-        'timestamp': FieldValue.serverTimestamp(), // Automatically adds server timestamp
+        'timestamp': FieldValue.serverTimestamp(),
       });
-
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job posted successfully')));
-
-      // Navigate back to the previous screen after posting
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error posting job: $e')));
@@ -112,30 +100,61 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Post a Job'),
-        backgroundColor: const Color(0xFF062D8A), // Primary blue color
+        backgroundColor: const Color(0xFF062D8A),
+        elevation: 4,
+        foregroundColor: Colors.white, // Ensures title and icons are white
+        iconTheme: const IconThemeData(color: Colors.white), // Ensures back arrow is white
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Job Title Input
+              const Text("Basic Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 20),
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Job Title', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Job Title',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
               ),
-              const SizedBox(height: 10),
-
-              // Job Description Input
+              const SizedBox(height: 20),
               TextField(
                 controller: _descriptionController,
-                maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Job Description', border: OutlineInputBorder()),
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: 'Job Description',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
               ),
-              const SizedBox(height: 10),
-
-              // Job Category Dropdown
+              const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 items: AppConstants.jobCategories.map((category) {
@@ -143,14 +162,29 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    _selectedCategory = value; // No need for `as String?`
+                    _selectedCategory = value;
                   });
                 },
-                decoration: const InputDecoration(labelText: 'Job Category', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Job Category',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
               ),
-              const SizedBox(height: 10),
-
-              // Region and City Dropdowns
+              const SizedBox(height: 30),
+              const Text("Location & Deadline", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -161,35 +195,63 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _selectedRegion = value; // No need for `as String?`
-                          _selectedCity = null; // Reset city when region changes
+                          _selectedRegion = value;
+                          _selectedCity = null;
                         });
                       },
-                      decoration: const InputDecoration(labelText: 'Region', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                        labelText: 'Region',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _selectedCity,
                       items: _selectedRegion != null
-                          ? AppConstants.regionsAndCities[_selectedRegion]!.map((city) {
-                              return DropdownMenuItem(value: city, child: Text(city));
-                            }).toList()
+                          ? AppConstants.regionsAndCities[_selectedRegion]!
+                          .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+                          .toList()
                           : [],
                       onChanged: (value) {
                         setState(() {
-                          _selectedCity = value; // No need for `as String?`
+                          _selectedCity = value;
                         });
                       },
-                      decoration: const InputDecoration(labelText: 'City', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                        labelText: 'City',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              // Deadline Picker
+              const SizedBox(height: 20),
               TextField(
                 controller: _deadlineController,
                 readOnly: true,
@@ -206,60 +268,103 @@ class _JobPostingScreenState extends State<JobPostingScreen> {
                     });
                   }
                 },
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Deadline',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
+                  suffixIcon: const Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF062D8A), width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Media Upload Buttons
+              const SizedBox(height: 30),
+              const Text("Media Uploads", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: _pickImage,
+                    icon: const Icon(Icons.image),
+                    label: const Text('Upload Image'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF062D8A),
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      elevation: 3,
                     ),
-                    child: const Text('Upload Image'),
                   ),
-                  ElevatedButton(
+                  const SizedBox(width: 20),
+                  ElevatedButton.icon(
                     onPressed: _pickVideo,
+                    icon: const Icon(Icons.video_call),
+                    label: const Text('Upload Video'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF062D8A),
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      elevation: 3,
                     ),
-                    child: const Text('Upload Video'),
                   ),
                 ],
               ),
-
-              // Preview Uploaded Files
+              const SizedBox(height: 20),
               if (_imageFile != null)
-                Image.file(
-                  _imageFile!,
-                  height: 100,
+                Container(
+                  height: 150,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      _imageFile!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
               if (_videoFile != null)
-                const Text('Video uploaded successfully', style: TextStyle(color: Colors.green)),
-
-              const SizedBox(height: 20),
-
-              // Post Job Button
-              ElevatedButton(
-                onPressed: _postJob,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF062D8A),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), // Rounded corners
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24), // Consistent padding
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.green.withOpacity(0.1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline, color: Colors.green),
+                      const SizedBox(width: 10),
+                      const Text("Video uploaded successfully", style: TextStyle(color: Colors.green)),
+                    ],
+                  ),
                 ),
-                child: const Text('Post Job'), // Ensure 'child' is last
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _postJob,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF062D8A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                  ),
+                  child: const Text('Post Job', style: TextStyle(fontSize: 16)),
+                ),
               ),
             ],
           ),

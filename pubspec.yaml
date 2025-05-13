@@ -70,6 +70,7 @@ dependencies:
   pin_input_text_field: ^4.2.0
   connectivity_monitor: ^1.0.0
   file_picker: ^10.1.2
+  timeago: ^3.7.1
 
 
 

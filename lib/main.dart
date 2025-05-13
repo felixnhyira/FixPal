@@ -10,9 +10,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize localization data
+  await initializeDateFormatting(); // For default locale
+  Intl.defaultLocale = 'en'; // Set default language
 
   try {
     // Initialize Firebase with options

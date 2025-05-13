@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:fixpal/models/job_model.dart';
 import 'package:fixpal/screens/admin_dashboard.dart';
 import 'package:fixpal/screens/hired_freelancers_screen.dart';
@@ -44,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // App State
   String? _userRole;
+  String? _userName;
   String _searchQuery = '';
   Query _jobsQuery = FirebaseFirestore.instance.collection('jobs');
   int _unreadNotificationsCount = 0;
@@ -83,10 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
-
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists && mounted) {
-        setState(() => _userRole = doc.data()?['role']);
+        setState(() {
+          _userRole = doc.data()?['role'];
+          _userName = doc.data()?['firstName'] ?? 'User'; // Assumes firstName exists in Firestore
+        });
       }
     } catch (e) {
       _showErrorSnackBar('Error fetching user role: $e');
@@ -97,13 +99,11 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
-
       final snapshot = await _firestore
           .collection('notifications')
           .where('userId', isEqualTo: user.uid)
           .where('isRead', isEqualTo: false)
           .get();
-
       if (mounted) {
         setState(() => _unreadNotificationsCount = snapshot.docs.length);
       }
@@ -132,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _searchHistory.removeLast();
         }
       });
-      
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('searchHistory', _searchHistory);
     }
@@ -157,9 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _toggleVoiceSearch() async {
     if (!_speechEnabled) return;
-
     setState(() => _isListening = !_isListening);
-
     if (_isListening) {
       await _speechToText.listen(
         onResult: (result) {
@@ -179,38 +176,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _filterJobs(String query) {
     if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
-    
     _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       if (!mounted) return;
-      
       setState(() => _isLoading = true);
-      
       try {
         Query queryRef = _firestore.collection('jobs');
-        
+
         // Apply search term
         if (query.isNotEmpty) {
-          queryRef = queryRef.where(
-            'searchKeywords', 
-            arrayContains: query.toLowerCase()
-          );
+          queryRef = queryRef.where('searchKeywords', arrayContains: query.toLowerCase());
         }
-        
+
         // Apply filters
         if (_activeFilters['priceMin'] != null) {
-          queryRef = queryRef.where(
-            'price', 
-            isGreaterThanOrEqualTo: _activeFilters['priceMin']
-          );
+          queryRef = queryRef.where('price', isGreaterThanOrEqualTo: _activeFilters['priceMin']);
         }
-        
         if (_activeFilters['priceMax'] != null) {
-          queryRef = queryRef.where(
-            'price', 
-            isLessThanOrEqualTo: _activeFilters['priceMax']
-          );
+          queryRef = queryRef.where('price', isLessThanOrEqualTo: _activeFilters['priceMax']);
         }
-        
+
         // Apply sorting
         switch (_selectedSortOption) {
           case 'Newest First':
@@ -223,12 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
           default:
             break;
         }
-        
+
         // Save to search history
         if (query.trim().isNotEmpty) {
           _saveSearchHistory(query.trim());
         }
-        
+
         setState(() {
           _jobsQuery = queryRef;
           _searchQuery = query;
@@ -281,7 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
               ),
-              
               const SizedBox(height: 16),
               const Text('Job Type:'),
               DropdownButton<String>(
@@ -289,9 +272,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 isExpanded: true,
                 items: ['All', 'Full-time', 'Part-time', 'Contract']
                     .map((type) => DropdownMenuItem(
-                          value: type == 'All' ? null : type,
-                          child: Text(type),
-                        ))
+                  value: type == 'All' ? null : type,
+                  child: Text(type),
+                ))
                     .toList(),
                 onChanged: (value) {
                   setState(() => _activeFilters['jobType'] = value);
@@ -361,7 +344,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _updateSuggestions(value);
           },
         ),
-        
         // Search suggestions
         if (_searchSuggestions.isNotEmpty)
           Container(
@@ -372,30 +354,28 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: _searchSuggestions
                   .map((term) => ListTile(
-                        title: Text(term),
-                        onTap: () {
-                          _searchController.text = term;
-                          _filterJobs(term);
-                        },
-                      ))
+                title: Text(term),
+                onTap: () {
+                  _searchController.text = term;
+                  _filterJobs(term);
+                },
+              ))
                   .toList(),
             ),
           ),
-        
         // Active filters chips
         Wrap(
           children: _activeFilters.entries
               .where((e) => e.value != null)
               .map((filter) => Chip(
-                    label: Text('${filter.key}: ${filter.value}'),
-                    onDeleted: () {
-                      setState(() => _activeFilters[filter.key] = null);
-                      _filterJobs(_searchController.text);
-                    },
-                  ))
+            label: Text('${filter.key}: ${filter.value}'),
+            onDeleted: () {
+              setState(() => _activeFilters[filter.key] = null);
+              _filterJobs(_searchController.text);
+            },
+          ))
               .toList(),
         ),
-        
         // Loading indicator
         if (_isLoading) const LinearProgressIndicator(),
       ],
@@ -423,11 +403,9 @@ class _HomeScreenState extends State<HomeScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Center(child: Text('No featured jobs available'));
               }
-
               return _buildJobList(snapshot.data!.docs);
             },
           ),
@@ -454,8 +432,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListTile(
         leading: Icon(
           job.isFeatured ?? false ? Icons.star : Icons.work,
-        color: job.isFeatured ?? false ? Colors.yellow : Colors.blue,
-      ),
+          color: job.isFeatured ?? false ? Colors.yellow : Colors.blue,
+        ),
         title: Text(job.title ?? 'No Title'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('Category: ${job.category ?? 'N/A'}'),
             Text('Location: ${job.region ?? 'N/A'}, ${job.city ?? 'N/A'}'),
             Text(
-              'Deadline: ${DateFormat('yyyy-MM-dd').format((job.deadline as Timestamp?)?.toDate() ?? DateTime.now())}',
+              'Deadline: ${DateFormat('yyyy-MM-dd').format(job.deadline ?? DateTime.now())}',
             ),
             if (job.applicantsCount != null)
               Text(
@@ -492,11 +470,9 @@ class _HomeScreenState extends State<HomeScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No jobs match your search'));
           }
-
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
@@ -511,32 +487,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-  return AppBar(
-    flexibleSpace: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppConstants.primaryBlue, AppConstants.secondaryPurple],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return AppBar(
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppConstants.primaryBlue, AppConstants.secondaryPurple],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
       ),
-    ),
-    title: _showSearchBar
-        ? null
-        : const Text('FixPal', style: TextStyle(color: Colors.white)),
-    leading: IconButton(
-      icon: const Icon(Icons.menu, color: Colors.white),
-      onPressed: () => Scaffold.of(context).openDrawer(),
-    ),
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.search, color: Colors.white),
-        onPressed: _toggleSearch,
+      title: _showSearchBar
+          ? null
+          : const Text('FixPal', style: TextStyle(color: Colors.white)),
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
       ),
-      _buildNotificationIcon(),
-    ],
-  );
-}
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search, color: Colors.white),
+          onPressed: _toggleSearch,
+        ),
+        _buildNotificationIcon(),
+      ],
+    );
+  }
 
   Widget _buildNotificationIcon() {
     return Stack(
@@ -597,9 +575,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Image.asset('assets/images/logo.png', width: 50, height: 50),
           const SizedBox(height: 10),
           Text(
-            'Welcome, ${_userRole ?? 'Guest'}',
+            'Welcome, ${_userName ?? 'Guest'}',
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
+          if (_userRole != null)
+            Text(
+              '(${_userRole!})',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
         ],
       ),
     );
@@ -643,7 +626,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final doc = await _firestore.collection('appConfig').doc('latestVersion').get();
-
       if (doc.exists) {
         final latestVersion = doc.data()?['version'] ?? '';
         if (latestVersion != packageInfo.version) {
@@ -678,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _launchAppStore() async {
-    const url = 'https://play.google.com/store/apps/details?id=com.fixpal';
+    const url = 'https://play.google.com/store/apps/details?id=com.fixpal ';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     } else {
@@ -743,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleBottomNavTap(int index) {
     switch (index) {
       case 0:
-        // Already on home
+      // Already on home
         break;
       case 1:
         Navigator.push(
@@ -880,8 +862,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           if (_showSearchBar) _buildSearchBar(),
-          if (_searchQuery.isEmpty && _isFeaturedSectionVisible) 
-            _buildFeaturedJobsSection(),
+          if (_searchQuery.isEmpty && _isFeaturedSectionVisible) _buildFeaturedJobsSection(),
           _buildAllJobsList(),
         ],
       ),

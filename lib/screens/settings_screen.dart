@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For local storage
 import 'package:fixpal/screens/login_screen.dart';
-import 'package:url_launcher/url_launcher.dart'; // Import LoginScreen
+import 'package:url_launcher/url_launcher.dart';
+
+import '../utils/constants.dart'; // Import LoginScreen
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -35,8 +37,17 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppConstants.primaryBlue, AppConstants.secondaryPurple],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFF062D8A), // Primary blue color
+          foregroundColor: Colors.white,
       ),
       body: ListView(
         children: [
