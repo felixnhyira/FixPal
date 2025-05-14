@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 
 import 'package:fixpal/models/job_model.dart';
 import 'package:fixpal/screens/job_details_screen.dart';

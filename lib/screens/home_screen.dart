@@ -56,14 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // Search History & Filters
   List<String> _searchHistory = [];
   List<String> _searchSuggestions = [];
-  final Map<String, dynamic> _activeFilters = {
-    'priceMin': null,
-    'priceMax': null,
-    'locationRadius': null,
-    'jobType': null,
-    'experienceLevel': null
-  };
-  final String _selectedSortOption = 'Most Relevant';
+  String? _selectedCategory;
+  String? _selectedRegion;
+  String? _selectedCity;
+  List<String> _availableCities = [];
+  bool _showFilters = false;
 
   @override
   void initState() {
@@ -87,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (doc.exists && mounted) {
         setState(() {
           _userRole = doc.data()?['role'];
-          _userName = doc.data()?['firstName'] ?? 'User'; // Assumes firstName exists in Firestore
+          _userName = doc.data()?['firstName'] ?? 'User';
         });
       }
     } catch (e) {
@@ -187,25 +184,19 @@ class _HomeScreenState extends State<HomeScreen> {
           queryRef = queryRef.where('searchKeywords', arrayContains: query.toLowerCase());
         }
 
-        // Apply filters
-        if (_activeFilters['priceMin'] != null) {
-          queryRef = queryRef.where('price', isGreaterThanOrEqualTo: _activeFilters['priceMin']);
-        }
-        if (_activeFilters['priceMax'] != null) {
-          queryRef = queryRef.where('price', isLessThanOrEqualTo: _activeFilters['priceMax']);
+        // Apply category filter
+        if (_selectedCategory != null) {
+          queryRef = queryRef.where('category', isEqualTo: _selectedCategory);
         }
 
-        // Apply sorting
-        switch (_selectedSortOption) {
-          case 'Newest First':
-            queryRef = queryRef.orderBy('createdAt', descending: true);
-            break;
-          case 'Highest Paying':
-            queryRef = queryRef.orderBy('price', descending: true);
-            break;
-          case 'Most Relevant':
-          default:
-            break;
+        // Apply region filter
+        if (_selectedRegion != null) {
+          queryRef = queryRef.where('region', isEqualTo: _selectedRegion);
+        }
+
+        // Apply city filter
+        if (_selectedCity != null) {
+          queryRef = queryRef.where('city', isEqualTo: _selectedCity);
         }
 
         // Save to search history
@@ -228,6 +219,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _updateCitiesForRegion(String? region) {
+    if (region == null) {
+      setState(() {
+        _selectedCity = null;
+        _availableCities = [];
+      });
+      return;
+    }
+    
+    setState(() {
+      _selectedCity = null;
+      _availableCities = AppConstants.regionsAndCities[region] ?? [];
+    });
+  }
+
   void _updateSuggestions(String query) {
     setState(() {
       _searchSuggestions = _searchHistory
@@ -236,71 +242,116 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Jobs'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Price Range:'),
-              RangeSlider(
-                values: RangeValues(
-                  _activeFilters['priceMin']?.toDouble() ?? 0,
-                  _activeFilters['priceMax']?.toDouble() ?? 1000,
-                ),
-                min: 0,
-                max: 1000,
-                divisions: 10,
-                labels: RangeLabels(
-                  _activeFilters['priceMin']?.toString() ?? '0',
-                  _activeFilters['priceMax']?.toString() ?? '1000',
-                ),
-                onChanged: (values) {
-                  setState(() {
-                    _activeFilters['priceMin'] = values.start.toInt();
-                    _activeFilters['priceMax'] = values.end.toInt();
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text('Job Type:'),
-              DropdownButton<String>(
-                value: _activeFilters['jobType'],
-                isExpanded: true,
-                items: ['All', 'Full-time', 'Part-time', 'Contract']
-                    .map((type) => DropdownMenuItem(
-                  value: type == 'All' ? null : type,
-                  child: Text(type),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _activeFilters['jobType'] = value);
-                },
-              ),
-            ],
+  Widget _buildFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
           ),
-        ),
-        actions: [
-          TextButton(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Filter Jobs',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          
+          // Category Dropdown
+          DropdownButtonFormField<String>(
+            value: _selectedCategory,
+            decoration: InputDecoration(
+              labelText: 'Job Category',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('All Categories')),
+              ...AppConstants.jobCategories.map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                );
+              }).toList(),
+            ],
+            onChanged: (value) {
+              setState(() => _selectedCategory = value);
+              _filterJobs(_searchController.text);
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Region Dropdown
+          DropdownButtonFormField<String>(
+            value: _selectedRegion,
+            decoration: InputDecoration(
+              labelText: 'Region',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('All Regions')),
+              ...AppConstants.regionsAndCities.keys.map((region) {
+                return DropdownMenuItem(
+                  value: region,
+                  child: Text(region),
+                );
+              }).toList(),
+            ],
+            onChanged: (value) {
+              setState(() => _selectedRegion = value);
+              _updateCitiesForRegion(value);
+              _filterJobs(_searchController.text);
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // City Dropdown (only shown if region is selected)
+          if (_selectedRegion != null)
+            DropdownButtonFormField<String>(
+              value: _selectedCity,
+              decoration: InputDecoration(
+                labelText: 'City',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('All Cities')),
+                ..._availableCities.map((city) {
+                  return DropdownMenuItem(
+                    value: city,
+                    child: Text(city),
+                  );
+                }).toList(),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedCity = value);
+                _filterJobs(_searchController.text);
+              },
+            ),
+          
+          const SizedBox(height: 16),
+          
+          // Clear Filters Button
+          OutlinedButton(
             onPressed: () {
               setState(() {
-                _activeFilters['priceMin'] = null;
-                _activeFilters['priceMax'] = null;
-                _activeFilters['jobType'] = null;
+                _selectedCategory = null;
+                _selectedRegion = null;
+                _selectedCity = null;
+                _availableCities = [];
               });
-              Navigator.pop(context);
-            },
-            child: const Text('Reset'),
-          ),
-          TextButton(
-            onPressed: () {
               _filterJobs(_searchController.text);
-              Navigator.pop(context);
             },
-            child: const Text('Apply'),
+            child: const Text('Clear Filters'),
           ),
         ],
       ),
@@ -334,7 +385,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.filter_list),
-                  onPressed: _showFilterDialog,
+                  onPressed: () {
+                    setState(() => _showFilters = !_showFilters);
+                  },
                 ),
               ],
             ),
@@ -344,6 +397,13 @@ class _HomeScreenState extends State<HomeScreen> {
             _updateSuggestions(value);
           },
         ),
+        
+        // Show filters when toggled
+        if (_showFilters) ...[
+          const SizedBox(height: 16),
+          _buildFilterSection(),
+        ],
+        
         // Search suggestions
         if (_searchSuggestions.isNotEmpty)
           Container(
@@ -354,28 +414,50 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: _searchSuggestions
                   .map((term) => ListTile(
-                title: Text(term),
-                onTap: () {
-                  _searchController.text = term;
-                  _filterJobs(term);
-                },
-              ))
+                        title: Text(term),
+                        onTap: () {
+                          _searchController.text = term;
+                          _filterJobs(term);
+                        },
+                      ))
                   .toList(),
             ),
           ),
+        
         // Active filters chips
         Wrap(
-          children: _activeFilters.entries
-              .where((e) => e.value != null)
-              .map((filter) => Chip(
-            label: Text('${filter.key}: ${filter.value}'),
-            onDeleted: () {
-              setState(() => _activeFilters[filter.key] = null);
-              _filterJobs(_searchController.text);
-            },
-          ))
-              .toList(),
+          children: [
+            if (_selectedCategory != null)
+              Chip(
+                label: Text('Category: $_selectedCategory'),
+                onDeleted: () {
+                  setState(() => _selectedCategory = null);
+                  _filterJobs(_searchController.text);
+                },
+              ),
+            if (_selectedRegion != null)
+              Chip(
+                label: Text('Region: $_selectedRegion'),
+                onDeleted: () {
+                  setState(() {
+                    _selectedRegion = null;
+                    _selectedCity = null;
+                    _availableCities = [];
+                  });
+                  _filterJobs(_searchController.text);
+                },
+              ),
+            if (_selectedCity != null)
+              Chip(
+                label: Text('City: $_selectedCity'),
+                onDeleted: () {
+                  setState(() => _selectedCity = null);
+                  _filterJobs(_searchController.text);
+                },
+              ),
+          ],
         ),
+        
         // Loading indicator
         if (_isLoading) const LinearProgressIndicator(),
       ],

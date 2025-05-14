@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.fixpal"
-    android:versionCode="TODO"
-    android:versionName="TODO">
+    android:versionCode="1"
+    android:versionName="1.0.0">
 
     <uses-feature
         android:name="android.hardware.telephony"
@@ -35,13 +35,19 @@
     <!-- Internet Permission (Required for Firebase and other services) -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Storage Permission -->
+    <!-- Storage Permissions for all Android versions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"
-        tools:targetApi="4" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"
-        tools:targetApi="4" />
+        android:maxSdkVersion="32" />
+
+    <!-- For Android 13 (API 33) and above -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- Permission for audio files -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" /> 
+
+
+    
 
 
     <application

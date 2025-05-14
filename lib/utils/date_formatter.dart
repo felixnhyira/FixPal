@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -77,7 +76,7 @@ class DateFormatter {
     timeago.setLocaleMessages('fr', timeago.FrMessages());
     timeago.setLocaleMessages('es', timeago.EsMessages());
 
-    final locale = Intl.getCurrentLocale()?.substring(0, 2) ?? 'en';
+    final locale = Intl.getCurrentLocale().substring(0, 2);
     return timeago.format(date, locale: locale);
   }
 }

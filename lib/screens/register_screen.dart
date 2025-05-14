@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:fixpal/screens/login_screen.dart';
 import 'package:fixpal/utils/constants.dart';
 import 'package:permission_handler/permission_handler.dart';
-// Import SnackbarHelper
 import 'package:fixpal/utils/snackbar_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -101,16 +100,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _pickAndCropImage(ImageSource source, String type) async {
     try {
+      // Check and request storage permission
       final status = await Permission.storage.status;
       if (!status.isGranted) {
         final result = await Permission.storage.request();
-        if (!result.isGranted) {
-          SnackbarHelper.showError(context, 'Storage permission denied');
+        if (result.isDenied || result.isPermanentlyDenied) {
+          SnackbarHelper.showError(context, 'Storage permission is required to select images');
           return;
         }
       }
+
       final pickedFile = await ImagePicker().pickImage(source: source);
       if (pickedFile == null) return;
+
       CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: pickedFile.path,
         aspectRatio: type == 'profile'
@@ -130,6 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           IOSUiSettings(title: 'Crop Image'),
         ],
       );
+
       if (croppedFile != null) {
         setState(() {
           if (type == 'id') {

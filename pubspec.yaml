@@ -51,7 +51,6 @@ dependencies:
   image_cropper: ^9.0.0
   flutter_secure_storage: ^9.2.4
   speech_to_text: ^7.0.0
-  geolocator: ^13.0.2
   package_info_plus: ^8.3.0
   shared_preferences: ^2.5.2
   flutter_animate: ^4.5.2
@@ -62,7 +61,7 @@ dependencies:
   sms_autofill: ^2.4.1
   permission_handler: ^11.4.0
   connectivity_plus: ^6.1.3
-  flutter_svg: ^2.0.17
+  flutter_svg: ^2.1.0
   archive: ^3.6.1
   async: ^2.12.0
   grpc: ^3.2.4
@@ -71,6 +70,7 @@ dependencies:
   connectivity_monitor: ^1.0.0
   file_picker: ^10.1.2
   timeago: ^3.7.1
+
 
 
 
@@ -104,6 +104,7 @@ flutter:
     - assets/icons/wifi_off.svg
     - assets/images/google_logo.svg
     - assets/icons/terms_icon.png
+    - assets/credentials/dialogflow_key.json
 
 
   # The following line ensures that the Material Icons font is
